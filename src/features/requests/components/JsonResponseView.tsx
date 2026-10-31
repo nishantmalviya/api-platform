@@ -99,6 +99,31 @@ export function JsonResponseView({ value }: { value: unknown }) {
   if (value === null || value === undefined) {
     return null;
   }
+  const isContainer = value !== null && typeof value === "object";
+  if (isContainer) {
+    const isArray = Array.isArray(value);
+    const entries = isArray
+      ? (value as unknown[]).map((v, i) => [String(i), v] as [string, unknown])
+      : Object.entries(value as Record<string, unknown>);
+    const open = isArray ? "[" : "{";
+    const close = isArray ? "]" : "}";
+    return (
+      <div className="overflow-auto rounded-md border border-border bg-muted p-3 font-mono text-xs" data-testid="response-json-view">
+        {open}
+        {entries.map(([key, childValue], index) => (
+          <JsonNode
+            key={key}
+            name={key}
+            value={childValue}
+            depth={1}
+            defaultOpen={true}
+            comma={index < entries.length - 1 ? "," : ""}
+          />
+        ))}
+        {close}
+      </div>
+    );
+  }
   const content = <JsonNode name="" value={value} depth={0} defaultOpen />;
   return (
     <div className="overflow-auto rounded-md border border-border bg-muted p-3 font-mono text-xs" data-testid="response-json-view">
