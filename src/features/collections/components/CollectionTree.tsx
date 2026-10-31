@@ -386,9 +386,25 @@ export function CollectionTree() {
 
   if (workspace.collections.length === 0) {
     return (
-      <p className="px-2 text-sm text-muted-foreground">
-        No collections in this workspace yet.
-      </p>
+      <div className="space-y-5">
+        <div className="mb-1.5 flex items-center justify-between px-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Projects
+          </h3>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={() => addCollection(workspace.id, `New Project ${workspace.collections.length + 1}`)}
+            aria-label="Add project"
+            data-testid="add-collection-button"
+            title="Add project"
+          >
+            <FolderPlus className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+        <p className="px-2 text-sm text-muted-foreground">No collections in this workspace yet.</p>
+      </div>
     );
   }
 
