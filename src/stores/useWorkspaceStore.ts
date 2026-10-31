@@ -44,6 +44,7 @@ interface WorkspaceState {
   sendRequest: () => Promise<void>;
   addFolder: (collectionId: string, name: string) => string;
   addCollection: (workspaceId: string, name: string) => string;
+  addWorkspace: (name: string) => string;
   deleteCollection: (collectionId: string) => void;
   moveRequestToFolder: (requestId: string, folderId: string | null) => void;
   createRequest: (input: Omit<ApiRequest, "id">, folderId: string) => string;
@@ -341,6 +342,14 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           ),
         }));
         return collection.id;
+      },
+      addWorkspace: (name) => {
+        const workspace: Workspace = { id: createId("ws"), name, collections: [] };
+        set((state) => ({
+          workspaces: [...state.workspaces, workspace],
+          activeWorkspaceId: workspace.id,
+        }));
+        return workspace.id;
       },
       deleteCollection: (collectionId) =>
         set((state) => {

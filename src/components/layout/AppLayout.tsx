@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Blocks, BookOpen, Bot, History, Moon, PanelLeftClose, PanelLeftOpen, SlidersHorizontal, Sun } from "lucide-react";
+import { Blocks, BookOpen, Bot, FolderPlus, History, Moon, PanelLeftClose, PanelLeftOpen, SlidersHorizontal, Sun } from "lucide-react";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ export function AppLayout() {
   const activeWorkspaceId = useWorkspaceStore((state) => state.activeWorkspaceId);
   const workspaces = useWorkspaceStore((state) => state.workspaces);
   const setActiveWorkspace = useWorkspaceStore((state) => state.setActiveWorkspace);
+  const addWorkspace = useWorkspaceStore((state) => state.addWorkspace);
   const activeTabId = useWorkspaceStore((state) => state.activeTabId);
   const navigate = useNavigate();
 
@@ -80,6 +81,17 @@ export function AppLayout() {
                   </option>
                 ))}
               </Select>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => addWorkspace(`New Workspace ${workspaces.length + 1}`)}
+                aria-label="Add workspace"
+                data-testid="add-workspace-button"
+                title="Add workspace"
+              >
+                <FolderPlus className="h-3.5 w-3.5" />
+              </Button>
             </div>
             <p className="truncate text-xs text-muted-foreground">
               AI-native API development platform
