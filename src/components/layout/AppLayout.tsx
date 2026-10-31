@@ -3,6 +3,7 @@ import { Blocks, BookOpen, Bot, History, Moon, PanelLeftClose, PanelLeftOpen, Sl
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { CollectionTree } from "@/features/collections/components/CollectionTree";
 import { EnvironmentSwitcher } from "@/features/collections/components/EnvironmentSwitcher";
 import { RequestEditor } from "@/features/requests/components/RequestEditor";
@@ -18,6 +19,8 @@ export function AppLayout() {
   const sidebarCollapsed = useWorkspaceStore((state) => state.sidebarCollapsed);
   const toggleSidebar = useWorkspaceStore((state) => state.toggleSidebar);
   const activeWorkspaceId = useWorkspaceStore((state) => state.activeWorkspaceId);
+  const workspaces = useWorkspaceStore((state) => state.workspaces);
+  const setActiveWorkspace = useWorkspaceStore((state) => state.setActiveWorkspace);
   const activeTabId = useWorkspaceStore((state) => state.activeTabId);
   const navigate = useNavigate();
 
@@ -60,9 +63,24 @@ export function AppLayout() {
             )}
           </Button>
           <div className="min-w-0">
-            <h1 className="truncate text-sm font-semibold">
-              {workspace?.name ?? "API Studio"}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="truncate text-sm font-semibold">
+                {workspace?.name ?? "API Studio"}
+              </h1>
+              <Select
+                value={activeWorkspaceId}
+                onChange={(event) => setActiveWorkspace(event.target.value)}
+                className="h-7 w-44"
+                data-testid="workspace-select"
+                title="Select workspace"
+              >
+                {workspaces.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
             <p className="truncate text-xs text-muted-foreground">
               AI-native API development platform
             </p>

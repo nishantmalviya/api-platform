@@ -12,7 +12,8 @@ describe("AppLayout", () => {
     );
 
     expect(screen.getByText("API Studio")).toBeInTheDocument();
-    expect(screen.getByText("Payments Workspace")).toBeInTheDocument();
+    expect(screen.getByText("Payments Workspace", { selector: "h1" })).toBeInTheDocument();
+    expect(screen.getByTestId("workspace-select")).toBeInTheDocument();
     expect(screen.getByTestId("send-button")).toBeInTheDocument();
     expect(screen.getByTestId("url-input")).toBeInTheDocument();
   });
