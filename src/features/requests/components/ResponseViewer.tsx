@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import { diffJsonSemantic, diffTextLines, summarizeDiff } from "@/features/requests/lib/diff";
 import { JsonResponseView } from "@/features/requests/components/JsonResponseView";
@@ -30,6 +31,8 @@ export function ResponseViewer({ requestId }: ResponseViewerProps) {
   const isSending = sendingRequestIds.includes(requestId);
   const [bodyTab, setBodyTab] = useState<"body" | "headers">("body");
   const [compareRequestId, setCompareRequestId] = useState<string>("");
+  const [regexFilter, setRegexFilter] = useState("");
+  const [appliedRegexFilter, setAppliedRegexFilter] = useState("");
   const compareResponse = compareRequestId ? responses[compareRequestId] : undefined;
 
   const comparableRequestIds = useMemo(() => {
@@ -63,6 +66,46 @@ export function ResponseViewer({ requestId }: ResponseViewerProps) {
       return response.bodyPreview;
     }
   }, [response]);
+
+  const filteredResponseJson = useMemo<unknown>(() => {
+    if (!response?.bodyPreview || !appliedRegexFilter.trim()) {
+      return undefined;
+    }
+    const parsed = safeJsonParse(response.bodyPreview);
+    if (parsed === undefined) {
+      return undefined;
+    }
+    let pattern: RegExp;
+    try {
+      pattern = new RegExp(appliedRegexFilter.trim());
+    } catch {
+      return undefined;
+    }
+    const filterValue = (value: unknown): unknown => {
+      if (Array.isArray(value)) {
+        return value.filter((item) => {
+          const candidate = item as Record<string, unknown> | null;
+          if (candidate && typeof candidate === "object") {
+            const keys = Object.keys(candidate);
+            return keys.some((key) => pattern.test(key));
+          }
+          return false;
+        });
+      }
+      if (typeof value === "object" && value !== null) {
+        const entries = Object.entries(value as Record<string, unknown>).filter(
+          ([key]) => pattern.test(key),
+        );
+        const result: Record<string, unknown> = {};
+        for (const [key, entryValue] of entries) {
+          result[key] = filterValue(entryValue);
+        }
+        return result;
+      }
+      return value;
+    };
+    return filterValue(parsed);
+  }, [response, appliedRegexFilter]);
 
   const statusVariant: BadgeVariant =
     !response || response.status === 0
@@ -111,6 +154,27 @@ export function ResponseViewer({ requestId }: ResponseViewerProps) {
             </option>
           ))}
         </Select>
+        <div className="flex items-center gap-2">
+          <input
+            value={regexFilter}
+            onChange={(event) => setRegexFilter(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") setAppliedRegexFilter(regexFilter);
+            }}
+            placeholder="Filter response with regex…"
+            className="h-7 w-56 rounded-md border border-input bg-background px-2 font-mono text-xs"
+            data-testid="response-regex-filter-input"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7"
+            onClick={() => setAppliedRegexFilter(regexFilter)}
+            data-testid="response-regex-apply-button"
+          >
+            Apply
+          </Button>
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto p-3">
@@ -212,7 +276,11 @@ export function ResponseViewer({ requestId }: ResponseViewerProps) {
               </div>
             ) : null}
             {bodyTab === "body" ? (
-              safeJsonParse(prettyBody) !== undefined ? (
+              filteredResponseJson !== undefined ? (
+                <div className="overflow-auto rounded-md border border-border bg-muted p-3 font-mono text-xs">
+                  <JsonResponseView value={filteredResponseJson} />
+                </div>
+              ) : safeJsonParse(prettyBody) !== undefined ? (
                 <div className="overflow-auto rounded-md border border-border bg-muted p-3 font-mono text-xs">
                   <JsonResponseView value={safeJsonParse(prettyBody)} />
                 </div>
