@@ -78,6 +78,9 @@ export const ApiRequestSchema = z.object({
     })
     .optional(),
   environmentId: z.string().optional(),
+  workspaceId: z.string().optional(),
+  collectionId: z.string().optional(),
+  folderId: z.string().optional(),
   options: RequestOptionsSchema,
 });
 export type ApiRequest = z.infer<typeof ApiRequestSchema>;

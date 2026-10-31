@@ -44,6 +44,7 @@ interface WorkspaceState {
   sendRequest: () => Promise<void>;
   addFolder: (collectionId: string, name: string) => string;
   addCollection: (workspaceId: string, name: string) => string;
+  deleteCollection: (collectionId: string) => void;
   moveRequestToFolder: (requestId: string, folderId: string | null) => void;
   createRequest: (input: Omit<ApiRequest, "id">, folderId: string) => string;
   renameFolder: (folderId: string, name: string) => void;
@@ -141,6 +142,9 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           queryParams: [],
           auth: { type: "bearer", credentialRef: "bearer_token" },
           environmentId: "env_development",
+          workspaceId: "ws_payments",
+          collectionId: "col_payments",
+          folderId: "folder_payments",
           options: {
             timeoutMs: 30000,
             followRedirects: true,
@@ -173,6 +177,9 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           },
           auth: { type: "bearer", credentialRef: "bearer_token" },
           environmentId: "env_development",
+          workspaceId: "ws_payments",
+          collectionId: "col_payments",
+          folderId: "folder_payments",
           options: {
             timeoutMs: 30000,
             followRedirects: true,
@@ -193,6 +200,9 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           queryParams: [],
           auth: { type: "bearer", credentialRef: "bearer_token" },
           environmentId: "env_development",
+          workspaceId: "ws_payments",
+          collectionId: "col_payments",
+          folderId: "folder_payments",
           options: {
             timeoutMs: 30000,
             followRedirects: true,
@@ -218,12 +228,17 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       setActiveEnvironment: (environmentId) =>
         set({ activeEnvironmentId: environmentId }),
       openRequest: (requestId) =>
-        set((state) => ({
-          openTabs: state.openTabs.includes(requestId)
-            ? state.openTabs
-            : [...state.openTabs, requestId],
-          activeTabId: requestId,
-        })),
+        set((state) => {
+          const request = state.requests.find((item) => item.id === requestId);
+          const workspaceId = request?.workspaceId ?? state.activeWorkspaceId;
+          return {
+            openTabs: state.openTabs.includes(requestId)
+              ? state.openTabs
+              : [...state.openTabs, requestId],
+            activeTabId: requestId,
+            activeWorkspaceId: workspaceId,
+          };
+        }),
       closeTab: (requestId) =>
         set((state) => {
           const index = state.openTabs.indexOf(requestId);
@@ -327,6 +342,50 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         }));
         return collection.id;
       },
+      deleteCollection: (collectionId) =>
+        set((state) => {
+          const collection = state.workspaces
+            .flatMap((workspace) => workspace.collections)
+            .find((item) => item.id === collectionId);
+          const requestIdsToDelete = new Set<string>();
+          if (collection) {
+            for (const id of collection.requestIds ?? []) {
+              requestIdsToDelete.add(id);
+            }
+            for (const folder of collection.folders ?? []) {
+              for (const id of folder.requestIds ?? []) {
+                requestIdsToDelete.add(id);
+              }
+            }
+          }
+          const shouldClearActiveTab =
+            state.activeTabId !== null && requestIdsToDelete.has(state.activeTabId);
+          return {
+            requests: state.requests.filter((item) => !requestIdsToDelete.has(item.id)),
+            responses: Object.fromEntries(
+              Object.entries(state.responses).filter(([key]) => !requestIdsToDelete.has(key)),
+            ),
+            sendingRequestIds: state.sendingRequestIds.filter((id) => !requestIdsToDelete.has(id)),
+            openTabs: state.openTabs.filter((id) => !requestIdsToDelete.has(id)),
+            activeTabId: shouldClearActiveTab ? null : state.activeTabId,
+            favoriteRequestIds: state.favoriteRequestIds.filter((id) => !requestIdsToDelete.has(id)),
+            workspaces: state.workspaces.map((workspace) => ({
+              ...workspace,
+              collections: workspace.collections
+                .filter((item) => item.id !== collectionId)
+                .map((item) => ({
+                  ...item,
+                  requestIds: (item.requestIds ?? []).filter((id) => !requestIdsToDelete.has(id)),
+                  folders: (item.folders ?? [])
+                    .map((folder) => ({
+                      ...folder,
+                      requestIds: (folder.requestIds ?? []).filter((id) => !requestIdsToDelete.has(id)),
+                    }))
+                    .filter((folder) => (folder.requestIds ?? []).length > 0),
+                })),
+            })),
+          };
+        }),
       moveRequestToFolder: (requestId, folderId) => {
         set((state) => ({
           workspaces: state.workspaces.map((workspace) => ({
@@ -362,7 +421,16 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       },
       createRequest: (input, folderId) => {
         const id = createId("req");
-        const request: ApiRequest = { ...input, id };
+        const owningCollection = get().workspaces
+          .flatMap((workspace) => workspace.collections)
+          .find((collection) => (collection.folders ?? []).some((folder) => folder.id === folderId));
+        const request: ApiRequest = {
+          ...input,
+          id,
+          workspaceId: input.workspaceId ?? owningCollection?.workspaceId,
+          collectionId: input.collectionId ?? owningCollection?.id,
+          folderId: input.folderId ?? folderId,
+        };
         set((state) => ({
           requests: [...state.requests, request],
           workspaces: state.workspaces.map((workspace) => ({

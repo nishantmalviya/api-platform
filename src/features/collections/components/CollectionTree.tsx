@@ -362,6 +362,7 @@ export function CollectionTree() {
   const renameFolder = useWorkspaceStore((state) => state.renameFolder);
   const renameCollection = useWorkspaceStore((state) => state.renameCollection);
   const addCollection = useWorkspaceStore((state) => state.addCollection);
+  const deleteCollection = useWorkspaceStore((state) => state.deleteCollection);
   const environments = useWorkspaceStore((state) => state.environments);
   const activeEnvironmentId = useWorkspaceStore(
     (state) => state.activeEnvironmentId,
@@ -579,6 +580,17 @@ export function CollectionTree() {
                   title={`Edit ${collection.name}`}
                 >
                   <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => deleteCollection(collection.id)}
+                  aria-label={`Delete ${collection.name}`}
+                  data-testid={`delete-collection-button-${collection.id}`}
+                  title={`Delete ${collection.name}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
                 <Button
                   variant="ghost"
