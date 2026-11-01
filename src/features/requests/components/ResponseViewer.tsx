@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Check, Copy, Loader2 } from "lucide-react";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,6 +31,7 @@ export function ResponseViewer({ requestId }: ResponseViewerProps) {
   const isSending = sendingRequestIds.includes(requestId);
   const [bodyTab, setBodyTab] = useState<"body" | "headers">("body");
   const [compareRequestId, setCompareRequestId] = useState<string>("");
+  const [copied, setCopied] = useState(false);
   const [regexFilter, setRegexFilter] = useState("");
   const [appliedRegexFilter, setAppliedRegexFilter] = useState("");
   const compareResponse = compareRequestId ? responses[compareRequestId] : undefined;
@@ -107,6 +108,33 @@ export function ResponseViewer({ requestId }: ResponseViewerProps) {
     return filterValue(parsed);
   }, [response, appliedRegexFilter]);
 
+  const handleCopy = async () => {
+    if (!response) return;
+    const text =
+      bodyTab === "headers"
+        ? Object.entries(response.headers)
+            .map(([key, values]) => `${key}: ${values.join(", ")}`)
+            .join("\n")
+        : filteredResponseJson !== undefined
+          ? JSON.stringify(filteredResponseJson, null, 2)
+          : prettyBody;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
+  };
+
   const statusVariant: BadgeVariant =
     !response || response.status === 0
       ? "error"
@@ -154,6 +182,17 @@ export function ResponseViewer({ requestId }: ResponseViewerProps) {
             </option>
           ))}
         </Select>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7"
+          disabled={!response}
+          onClick={() => void handleCopy()}
+          data-testid="response-copy-button"
+        >
+          {copied ? <Check className="mr-1 h-3 w-3" /> : <Copy className="mr-1 h-3 w-3" />}
+          {copied ? "Copied" : bodyTab === "headers" ? "Copy headers" : "Copy"}
+        </Button>
         <div className="flex items-center gap-2">
           <input
             value={regexFilter}
@@ -277,13 +316,9 @@ export function ResponseViewer({ requestId }: ResponseViewerProps) {
             ) : null}
             {bodyTab === "body" ? (
               filteredResponseJson !== undefined ? (
-                <div className="overflow-auto rounded-md border border-border bg-muted p-3 font-mono text-xs">
-                  <JsonResponseView value={filteredResponseJson} />
-                </div>
+                <JsonResponseView value={filteredResponseJson} />
               ) : safeJsonParse(prettyBody) !== undefined ? (
-                <div className="overflow-auto rounded-md border border-border bg-muted p-3 font-mono text-xs">
-                  <JsonResponseView value={safeJsonParse(prettyBody)} />
-                </div>
+                <JsonResponseView value={safeJsonParse(prettyBody)} />
               ) : (
                 <pre className="overflow-auto rounded-md bg-muted p-3 font-mono text-xs whitespace-pre-wrap">
                   {prettyBody}
